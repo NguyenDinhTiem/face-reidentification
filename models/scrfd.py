@@ -52,24 +52,45 @@ class SCRFD:
 
         self._initialize_model(model_path=model_path)
 
-    def _initialize_model(self, model_path: str) -> None:
+    def _initialize_model(self, model_path: str, providers: list = None) -> None:
         """Initialize the ONNX inference session.
 
         Args:
             model_path (str): Path to .onnx model.
+            providers (list, optional): List of execution providers. Defaults to None.
         """
+        import onnxruntime
+        if providers is None:
+            available = onnxruntime.get_available_providers()
+            providers = []
+            if 'CUDAExecutionProvider' in available:
+                providers.append(('CUDAExecutionProvider', {
+                    'device_id': 0,
+                    'arena_extend_strategy': 'kSameAsRequested',
+                    'cudnn_conv_algo_search': 'EXHAUSTIVE',
+                }))
+            providers.append('CPUExecutionProvider')
+
         try:
+            opts = onnxruntime.SessionOptions()
+            opts.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
             self.session = onnxruntime.InferenceSession(
                 model_path,
-                providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
+                sess_options=opts,
+                providers=providers
             )
             # Get model info
             self.output_names = [x.name for x in self.session.get_outputs()]
             self.input_names = [x.name for x in self.session.get_inputs()]
             logger.info(f"Successfully loaded SCRFD model from {model_path}")
         except Exception as e:
-            logger.error(f"Failed to load the model: {e}")
-            raise
+            logger.warning(f"Failed to load the model with optimal providers: {e}. Falling back to CPU...")
+            self.session = onnxruntime.InferenceSession(
+                model_path,
+                providers=["CPUExecutionProvider"]
+            )
+            self.output_names = [x.name for x in self.session.get_outputs()]
+            self.input_names = [x.name for x in self.session.get_inputs()]
 
     def forward(
         self, image: np.ndarray, threshold: float

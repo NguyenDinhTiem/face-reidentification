@@ -1,153 +1,220 @@
-# Real-Time Face Re-Identification with FAISS, ArcFace & SCRFD
+# AI Viet Nam — Face Re-Identification System
 
-[![Downloads](https://img.shields.io/github/downloads/yakhyo/face-reidentification/total?color=blue&label=Downloads)](https://github.com/yakhyo/face-reidentification/releases)
-[![GitHub Repo Stars](https://img.shields.io/github/stars/yakhyo/face-reidentification)](https://github.com/yakhyo/face-reidentification/stargazers)
-[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/yakhyo/face-reidentification)
-[![DeepWiki](https://img.shields.io/badge/DeepWiki-Docs-blue)](https://deepwiki.com/yakhyo/face-reidentification)
+Hệ thống nhận diện khuôn mặt thời gian thực kết hợp **Desktop GUI**, **REST API**, **PostgreSQL** và **React Dashboard**.
 
-> [!TIP]
-> The models and functionality in this repository are **integrated into [UniFace](https://github.com/yakhyo/uniface)** — an all-in-one face analysis library.<br>
-> [![PyPI Version](https://img.shields.io/pypi/v/uniface.svg)](https://pypi.org/project/uniface/) [![GitHub Stars](https://img.shields.io/github/stars/yakhyo/uniface)](https://github.com/yakhyo/uniface/stargazers) [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+![Python](https://img.shields.io/badge/Python-3.10+-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-green)
+![React](https://img.shields.io/badge/React-18-61DAFB)
+![Docker](https://img.shields.io/badge/Docker-required-2496ED)
 
-<!--
-<h5 align="center"> If you like our project, please give us a star ⭐ on GitHub for the latest updates.</h5>
--->
+---
 
-<video controls autoplay loop src="https://github.com/user-attachments/assets/16d63ac6-57a4-464b-8d82-948e1a06b6e3" muted="false" width="100%"></video>
-
-## Key Features
-
-- **Real-Time Face Recognition**: Process webcam or video files with SCRFD detection and ArcFace embeddings
-- **FAISS Similarity Search**: Batch cosine-similarity lookup using a FAISS inner-product index
-- **Multiple Model Sizes**: Choose from lightweight to high-accuracy detection and recognition models
-- **Minimal Dependencies**: Built on ONNX Runtime, OpenCV, NumPy, and FAISS with no extra frameworks
-
-> [!NOTE]
-> Place your target face images in the `assets/faces/` directory. The filenames will be used as identity labels during recognition.
-
-## Components
-
-1. **SCRFD** — Sample and Computation Redistribution for Efficient Face Detection
-2. **ArcFace** — Additive Angular Margin Loss for Deep Face Recognition
-3. **FAISS** — Facebook AI Similarity Search
-
-### Available Models
-
-| Category | Model | Size | Description |
-|----------|-------|------|-------------|
-| Detection | SCRFD 500M | 2.41 MB | Lightweight face detection |
-| Detection | SCRFD 2.5G | 3.14 MB | Balanced performance |
-| Detection | SCRFD 10G | 16.1 MB | High accuracy |
-| Recognition | ArcFace MobileFace | 12.99 MB | Mobile-friendly recognition |
-| Recognition | ArcFace ResNet-50 | 166 MB | High-accuracy recognition |
-
-## Project Structure
+## Kiến trúc hệ thống
 
 ```
-├── assets/
-│   ├── demo.mp4
-│   ├── in_video.mp4
-│   └── faces/              # Place target face images here
-│       ├── face1.jpg
-│       ├── face2.jpg
-│       └── ...
-├── database/               # FAISS database implementation
-├── models/                 # Neural network models
-├── weights/                # Model weights (download required)
-├── utils/                  # Helper functions
-├── main.py                 # Main application entry
-└── requirements.txt        # Dependencies
+┌──────────────┐   WebSocket    ┌──────────────────┐
+│  GUI (PyQt6) │ ─────────────► │  API (FastAPI)    │
+│  Camera Feed │ ◄───────────── │  SCRFD + ArcFace  │
+└──────────────┘   bbox/names   │  FAISS Search     │
+                                └────────┬─────────┘
+                                         │ asyncpg
+                                ┌────────▼─────────┐
+                                │   PostgreSQL DB   │
+                                │  (Docker)         │
+                                └────────┬─────────┘
+                                         │ REST API
+                                ┌────────▼─────────┐
+                                │  React Dashboard  │
+                                │  localhost:5173    │
+                                └──────────────────┘
 ```
 
-## Getting Started
+---
 
-### Prerequisites
+## Yêu cầu hệ thống
 
-> [!IMPORTANT]
-> Make sure you have Python 3.10+ installed on your system.
+| Thành phần | Phiên bản |
+|---|---|
+| Python | 3.10+ |
+| Node.js | 18+ |
+| Docker Desktop | mới nhất |
+| GPU (tuỳ chọn) | CUDA 11.8+ |
 
-### Installation
+---
 
-1. **Clone the repository:**
+## Cài đặt
+
+### 1. Clone repository
+
 ```bash
-git clone https://github.com/yakhyo/face-reidentification.git
+git clone <your-repo-url>
 cd face-reidentification
 ```
 
-2. **Install dependencies:**
+### 2. Tải model weights
+
+Tải về và đặt vào thư mục `weights/`:
+
+| Model | Link | Dung lượng |
+|---|---|---|
+| SCRFD 10G (detection) | [det_10g.onnx](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/det_10g.onnx) | 16.1 MB |
+| SCRFD 500M (nhẹ) | [det_500m.onnx](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/det_500m.onnx) | 2.4 MB |
+| ArcFace MobileFace | [w600k_mbf.onnx](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/w600k_mbf.onnx) | 13 MB |
+| ArcFace ResNet-50 | [w600k_r50.onnx](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/w600k_r50.onnx) | 166 MB |
+
+```bash
+# Linux/Mac — tải tự động
+sh download.sh
+```
+
+### 3. Thêm ảnh khuôn mặt cần nhận diện
+
+Đặt ảnh khuôn mặt vào thư mục `assets/faces/`. **Tên file = tên người**.
+
+```
+assets/faces/
+├── NguyenVanA.jpg
+├── TranThiB.jpg
+└── ...
+```
+
+> Mỗi người chỉ cần 1 ảnh, chụp rõ mặt, ánh sáng tốt.
+
+### 4. Khởi động PostgreSQL (Docker)
+
+```bash
+docker compose up -d
+```
+
+Kiểm tra DB đã sẵn sàng:
+```bash
+docker compose ps
+```
+
+### 5. Cài Python dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-3. **Download model weights:**
+> **GPU:** Đổi `onnxruntime-gpu` thay `onnxruntime` trong `requirements.txt` nếu có CUDA.
 
-<details>
-<summary>Click to see download links 📥</summary>
-
-| Model | Download Link | Size |
-|-------|--------------|------|
-| SCRFD 500M | [det_500m.onnx](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/det_500m.onnx) | 2.41 MB |
-| SCRFD 2.5G | [det_2.5g.onnx](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/det_2.5g.onnx) | 3.14 MB |
-| SCRFD 10G | [det_10g.onnx](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/det_10g.onnx) | 16.1 MB |
-| ArcFace MobileFace | [w600k_mbf.onnx](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/w600k_mbf.onnx) | 12.99 MB |
-| ArcFace ResNet-50 | [w600k_r50.onnx](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/w600k_r50.onnx) | 166 MB |
-
-</details>
-
-**Quick download (Linux/Mac):**
-```bash
-sh download.sh
-```
-
-4. **Add target faces:**
-Place face images in `assets/faces/` directory. The filename will be used as the person's identity.
-
-## Usage
-
-### Basic Usage
-```bash
-python main.py --source assets/in_video.mp4
-```
-
-### Command Line Arguments
-
-> [!TIP]
-> Use these arguments to customize the recognition behavior:
+### 6. Chạy API backend
 
 ```bash
-usage: main.py [-h] [--det-weight DET_WEIGHT] [--rec-weight REC_WEIGHT]
-               [--similarity-thresh SIMILARITY_THRESH] [--confidence-thresh CONFIDENCE_THRESH]
-               [--faces-dir FACES_DIR] [--source SOURCE] [--max-num MAX_NUM]
+python api.py
 ```
 
-| Argument | Description | Default |
-|----------|-------------|---------|
-| `--det-weight` | Detection model path | `./weights/det_10g.onnx` |
-| `--rec-weight` | Recognition model path | `./weights/w600k_mbf.onnx` |
-| `--similarity-thresh` | Face similarity threshold | `0.4` |
-| `--confidence-thresh` | Detection confidence threshold | `0.5` |
-| `--faces-dir` | Target faces directory | `./assets/faces` |
-| `--source` | Video source (file or camera index) | `./assets/in_video.mp4` |
-| `--max-num` | Max faces per frame (0 = unlimited) | `0` |
-| `--db-path` | Custom database storage location | `./database/face_database` |
-| `--update-db` | Force rebuild face database | `False` |
-| `--output` | Specify output video path | `output_video.mp4` |
+API khởi động tại `http://localhost:8000`. Swagger docs: `http://localhost:8000/docs`
 
-## Technical Notes
+### 7. Chạy GUI desktop
 
-- Face database is saved to and loaded from disk automatically; no rebuild needed on restart
-- All detected faces in a frame are queried in a single FAISS `index.search()` call
-- For GPU-accelerated inference, install `onnxruntime-gpu` instead of `onnxruntime`
+```bash
+python gui.py
+```
+
+- Nhấn **▶ Start** để bật camera và bắt đầu nhận diện
+- Nhấn **⚙ Settings** để đổi model / nguồn camera / ngưỡng
+
+### 8. Chạy React Dashboard (tuỳ chọn)
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Mở trình duyệt: `http://localhost:5173`
+
+---
+
+## Cấu trúc dự án
+
+```
+face-reidentification/
+├── api.py                 # FastAPI backend (REST + WebSocket)
+├── gui.py                 # Desktop GUI (PyQt6)
+├── db.py                  # PostgreSQL helpers (asyncpg)
+├── main.py                # CLI entry point (không dùng GUI)
+│
+├── models/                # SCRFD, ArcFace model wrappers
+├── database/              # FAISS database implementation
+├── utils/                 # Logging, helpers
+│
+├── weights/               # Model weights (.onnx) — không upload lên git
+├── assets/
+│   ├── faces/             # Ảnh khuôn mặt cần nhận diện
+│   └── captures/          # Ảnh crop tự động lưu — không upload lên git
+│
+├── web/                   # React dashboard (Vite)
+│   ├── src/
+│   │   ├── pages/         # Dashboard, Attendance, Unknowns, Settings
+│   │   ├── api.js         # API service layer
+│   │   └── App.jsx
+│   └── package.json
+│
+├── init.sql               # PostgreSQL schema
+├── docker-compose.yml     # PostgreSQL container
+└── requirements.txt
+```
+
+---
+
+## Thông tin kết nối PostgreSQL
+
+| Tham số | Giá trị mặc định |
+|---|---|
+| Host | `localhost` |
+| Port | `5432` |
+| Database | `faceid_db` |
+| Username | `faceid_user` |
+| Password | `faceid_pass` |
+
+Đổi thông tin kết nối qua biến môi trường:
+```bash
+DATABASE_URL=postgresql://user:pass@host:5432/dbname python api.py
+```
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Mô tả |
+|---|---|---|
+| `GET` | `/api/settings` | Lấy cấu hình hiện tại |
+| `POST` | `/api/settings` | Cập nhật cấu hình |
+| `POST` | `/api/infer/start` | Bật inference |
+| `POST` | `/api/infer/stop` | Tắt inference |
+| `GET` | `/api/attendance` | Lịch sử điểm danh |
+| `GET` | `/api/unknowns` | Log người lạ |
+| `GET` | `/api/stats` | Thống kê tổng quan |
+| `POST` | `/api/attendance/log` | Ghi log điểm danh (multipart) |
+| `POST` | `/api/unknown/log` | Ghi log người lạ (multipart) |
+| `WS` | `/ws/infer` | WebSocket nhận diện realtime |
+
+---
+
+## Troubleshooting
+
+**Camera không mở được:**
+- Kiểm tra nguồn camera trong Settings (0 = webcam mặc định, hoặc dùng URL RTSP)
+
+**Lỗi ONNX Runtime / CUDA:**
+- Dùng `onnxruntime` (CPU) nếu không có GPU hoặc CUDA chưa cài đúng
+- Xem log lỗi tại `app.log`
+
+**Không kết nối được PostgreSQL:**
+- Chắc chắn Docker đang chạy: `docker compose up -d`
+- Kiểm tra: `docker compose ps`
+
+**Web không hiển thị ảnh:**
+- Đảm bảo Vite dev server đang chạy (`npm run dev` trong thư mục `web/`)
+- Ảnh được serve qua proxy `/captures` → FastAPI
+
+---
 
 ## References
 
-> [!NOTE]
-> This project builds upon the following research:
-
-1. [SCRFD: Sample and Computation Redistribution for Efficient Face Detection](https://github.com/deepinsight/insightface/tree/master/detection/scrfd)
-2. [ArcFace: Additive Angular Margin Loss for Deep Face Recognition](https://github.com/deepinsight/insightface/tree/master/recognition/arcface_torch)
-
-<!-- ## Support
-
-If you find this project useful, please consider giving it a star on GitHub! -->
-
+- [SCRFD: Efficient Face Detection](https://github.com/deepinsight/insightface/tree/master/detection/scrfd)
+- [ArcFace: Deep Face Recognition](https://github.com/deepinsight/insightface/tree/master/recognition/arcface_torch)
+- [FAISS: Facebook AI Similarity Search](https://github.com/facebookresearch/faiss)

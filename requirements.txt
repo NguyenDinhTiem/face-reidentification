@@ -1,6 +1,12 @@
 onnx
-onnxruntime          # use onnxruntime-gpu instead if CUDA is available
+onnxruntime-gpu        # use onnxruntime-gpu instead if CUDA is available
 opencv-python
 numpy
 scikit-image
 faiss-cpu
+fastapi
+uvicorn
+websockets
+python-multipart
+PyQt6
+asyncpg

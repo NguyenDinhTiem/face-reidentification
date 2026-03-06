@@ -36,10 +36,25 @@ class ArcFace:
 
         logger.info(f"Initializing ArcFace model from {self.model_path}")
 
+        import onnxruntime
+        
+        available = onnxruntime.get_available_providers()
+        providers = []
+        if 'CUDAExecutionProvider' in available:
+            providers.append(('CUDAExecutionProvider', {
+                'device_id': 0,
+                'arena_extend_strategy': 'kSameAsRequested',
+                'cudnn_conv_algo_search': 'EXHAUSTIVE',
+            }))
+        providers.append('CPUExecutionProvider')
+
         try:
+            opts = onnxruntime.SessionOptions()
+            opts.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
             self.session = InferenceSession(
                 self.model_path,
-                providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
+                sess_options=opts,
+                providers=providers
             )
 
             input_config = self.session.get_inputs()[0]
@@ -66,8 +81,20 @@ class ArcFace:
             )
 
         except Exception as e:
-            logger.error(f"Failed to load face encoder model from '{self.model_path}'", exc_info=True)
-            raise RuntimeError(f"Failed to initialize model session for '{self.model_path}'") from e
+            logger.warning(f"Failed to load with optimal providers: {e}. Falling back to CPU...")
+            try:
+                self.session = InferenceSession(
+                    self.model_path,
+                    providers=["CPUExecutionProvider"]
+                )
+                input_config = self.session.get_inputs()[0]
+                self.input_name = input_config.name
+                self.output_names = [o.name for o in self.session.get_outputs()]
+                self.output_shape = self.session.get_outputs()[0].shape
+                self.embedding_size = self.output_shape[1]
+            except Exception as e2:
+                logger.error(f"Failed to load face encoder model from '{self.model_path}'", exc_info=True)
+                raise RuntimeError(f"Failed to initialize model session for '{self.model_path}'") from e2
 
     def preprocess(self, face_image: np.ndarray) -> np.ndarray:
         """
