@@ -62,6 +62,8 @@ class SCRFD:
         import onnxruntime
         if providers is None:
             available = onnxruntime.get_available_providers()
+            logger.info(f"SCRFD onnxruntime module: {onnxruntime.__file__}")
+            logger.info(f"SCRFD available providers: {available}")
             providers = []
             if 'CUDAExecutionProvider' in available:
                 providers.append(('CUDAExecutionProvider', {
@@ -70,6 +72,8 @@ class SCRFD:
                     'cudnn_conv_algo_search': 'EXHAUSTIVE',
                 }))
             providers.append('CPUExecutionProvider')
+            if 'CUDAExecutionProvider' not in available:
+                logger.warning("CUDAExecutionProvider is not available for SCRFD. Inference will use CPU.")
 
         try:
             opts = onnxruntime.SessionOptions()
@@ -83,6 +87,7 @@ class SCRFD:
             self.output_names = [x.name for x in self.session.get_outputs()]
             self.input_names = [x.name for x in self.session.get_inputs()]
             logger.info(f"Successfully loaded SCRFD model from {model_path}")
+            logger.info(f"SCRFD active providers: {self.session.get_providers()}")
         except Exception as e:
             logger.warning(f"Failed to load the model with optimal providers: {e}. Falling back to CPU...")
             self.session = onnxruntime.InferenceSession(
@@ -91,6 +96,7 @@ class SCRFD:
             )
             self.output_names = [x.name for x in self.session.get_outputs()]
             self.input_names = [x.name for x in self.session.get_inputs()]
+            logger.info(f"SCRFD active providers: {self.session.get_providers()}")
 
     def forward(
         self, image: np.ndarray, threshold: float

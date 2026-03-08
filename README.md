@@ -47,7 +47,7 @@ Hệ thống nhận diện khuôn mặt thời gian thực kết hợp **Desktop
 ### 1. Clone repository
 
 ```bash
-git clone <your-repo-url>
+git clone git@github.com:NguyenDinhTiem/face-reidentification.git
 cd face-reidentification
 ```
 
@@ -98,6 +98,20 @@ pip install -r requirements.txt
 ```
 
 > **GPU:** Đổi `onnxruntime-gpu` thay `onnxruntime` trong `requirements.txt` nếu có CUDA.
+>
+> **Windows + Conda:** Nên cài bằng `python -m pip install -r requirements.txt` sau khi `conda activate <env>`, tránh dùng `pip --user`.
+>
+> **Quan trọng:** Nếu Python đang ưu tiên package trong `C:\Users\<user>\AppData\Roaming\Python\...` thì `onnxruntime-gpu` trong conda env có thể bị che bởi bản `onnxruntime` CPU, khiến model chỉ chạy bằng CPU dù máy có CUDA.
+>
+> Có thể chặn hiện tượng này bằng cách:
+> ```bash
+> conda env config vars set -n <env> PYTHONNOUSERSITE=1
+> conda activate <env>
+> python -m pip install -r requirements.txt
+> python -c "import onnxruntime as ort; print(ort.__file__); print(ort.get_available_providers())"
+> ```
+>
+> Nếu cài mới trên Windows, nên dùng Python 3.11 cho môi trường dự án để giảm rủi ro lệch package.
 
 ### 6. Chạy API backend
 
@@ -202,6 +216,12 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname python api.py
 **Lỗi ONNX Runtime / CUDA:**
 - Dùng `onnxruntime` (CPU) nếu không có GPU hoặc CUDA chưa cài đúng
 - Xem log lỗi tại `app.log`
+- Nếu log không báo lỗi nhưng model vẫn chỉ chạy CPU, kiểm tra runtime đang import từ đâu:
+```bash
+python -c "import onnxruntime as ort; print(ort.__file__); print(ort.get_available_providers())"
+```
+- Nếu kết quả nằm trong `AppData\Roaming\Python\...` thay vì conda env, môi trường đang bị lẫn `user-site package`
+- Cách xử lý ổn định nhất là tạo env mới, bật `PYTHONNOUSERSITE=1`, rồi cài lại dependency bằng `python -m pip`
 
 **Không kết nối được PostgreSQL:**
 - Chắc chắn Docker đang chạy: `docker compose up -d`

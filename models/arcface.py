@@ -39,6 +39,8 @@ class ArcFace:
         import onnxruntime
         
         available = onnxruntime.get_available_providers()
+        logger.info(f"ArcFace onnxruntime module: {onnxruntime.__file__}")
+        logger.info(f"ArcFace available providers: {available}")
         providers = []
         if 'CUDAExecutionProvider' in available:
             providers.append(('CUDAExecutionProvider', {
@@ -47,6 +49,8 @@ class ArcFace:
                 'cudnn_conv_algo_search': 'EXHAUSTIVE',
             }))
         providers.append('CPUExecutionProvider')
+        if 'CUDAExecutionProvider' not in available:
+            logger.warning("CUDAExecutionProvider is not available for ArcFace. Inference will use CPU.")
 
         try:
             opts = onnxruntime.SessionOptions()
@@ -79,6 +83,7 @@ class ArcFace:
                 f"Successfully initialized face encoder from {self.model_path} "
                 f"(embedding size: {self.embedding_size})"
             )
+            logger.info(f"ArcFace active providers: {self.session.get_providers()}")
 
         except Exception as e:
             logger.warning(f"Failed to load with optimal providers: {e}. Falling back to CPU...")
@@ -92,6 +97,7 @@ class ArcFace:
                 self.output_names = [o.name for o in self.session.get_outputs()]
                 self.output_shape = self.session.get_outputs()[0].shape
                 self.embedding_size = self.output_shape[1]
+                logger.info(f"ArcFace active providers: {self.session.get_providers()}")
             except Exception as e2:
                 logger.error(f"Failed to load face encoder model from '{self.model_path}'", exc_info=True)
                 raise RuntimeError(f"Failed to initialize model session for '{self.model_path}'") from e2

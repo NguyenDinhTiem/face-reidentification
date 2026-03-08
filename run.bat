@@ -1,6 +1,6 @@
 @echo off
 echo Starting FastAPI Backend...
-start cmd /k "uvicorn api:app --reload --host 0.0.0.0 --port 8000"
+start cmd /k "python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000"
 
 echo Waiting for FastAPI to start...
 timeout /t 5 /nobreak >nul

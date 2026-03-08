@@ -10,3 +10,4 @@ websockets
 python-multipart
 PyQt6
 asyncpg
+ requests
