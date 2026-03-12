@@ -237,4 +237,5 @@ python -c "import onnxruntime as ort; print(ort.__file__); print(ort.get_availab
 
 - [SCRFD: Efficient Face Detection](https://github.com/deepinsight/insightface/tree/master/detection/scrfd)
 - [ArcFace: Deep Face Recognition](https://github.com/deepinsight/insightface/tree/master/recognition/arcface_torch)
+- [YOLOFace training guide](https://drive.google.com/drive/folders/1Df3xxfUsWDbMfqwTgOE7q2CeXakW4V8D?usp=sharing)
 - [FAISS: Facebook AI Similarity Search](https://github.com/facebookresearch/faiss)
