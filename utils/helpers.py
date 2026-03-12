@@ -49,9 +49,14 @@ def estimate_norm(landmark: np.ndarray, image_size: int = 112) -> Tuple[np.ndarr
     alignment = reference_alignment * ratio
     alignment[:, 0] += diff_x
 
-    # Compute the transformation matrix
-    transform = SimilarityTransform()
-    transform.estimate(landmark, alignment)
+    # scikit-image 0.26 deprecates the instance-level estimate() API.
+    if hasattr(SimilarityTransform, "from_estimate"):
+        transform = SimilarityTransform.from_estimate(landmark, alignment)
+        if not transform:
+            raise ValueError("Failed to estimate similarity transform from landmarks.")
+    else:
+        transform = SimilarityTransform()
+        transform.estimate(landmark, alignment)
 
     matrix = transform.params[0:2, :]
     inverse_matrix = np.linalg.inv(transform.params)[0:2, :]

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchSettings, saveSettings } from '../api'
+import { fetchModels, fetchSettings, saveSettings } from '../api'
 
 export default function Settings() {
     const [form, setForm] = useState({
@@ -10,13 +10,14 @@ export default function Settings() {
         unknown_debounce_sec: '',
         known_debounce_min: '',
     })
+    const [models, setModels] = useState([])
     const [loading, setLoading] = useState(true)
     const [saved, setSaved] = useState(false)
     const [error, setError] = useState('')
 
     useEffect(() => {
-        fetchSettings()
-            .then(d => {
+        Promise.all([fetchSettings(), fetchModels()])
+            .then(([d, modelResponse]) => {
                 setForm({
                     det_weight: d.det_weight ?? '',
                     rec_weight: d.rec_weight ?? '',
@@ -25,6 +26,7 @@ export default function Settings() {
                     unknown_debounce_sec: d.unknown_debounce_sec ?? '',
                     known_debounce_min: d.known_debounce_min ?? '',
                 })
+                setModels(modelResponse.models ?? [])
                 setLoading(false)
             })
             .catch(() => { setError('Cannot connect to API'); setLoading(false) })
@@ -51,9 +53,17 @@ export default function Settings() {
         }
     }
 
+    const detectionModels = models
+        .filter(name => name.includes('det') || name.includes('yolo') || name.includes('scrfd'))
+        .map(name => `./weights/${name}`)
+
+    const recognitionModels = models
+        .filter(name => name.includes('w600k') || name.includes('arcface') || name.includes('glint'))
+        .map(name => `./weights/${name}`)
+
     const FIELDS = [
-        { name: 'det_weight', label: 'Detection Model Weight', type: 'text', ph: './weights/det_10g.onnx' },
-        { name: 'rec_weight', label: 'Recognition Model Weight', type: 'text', ph: './weights/w600k_mbf.onnx' },
+        { name: 'det_weight', label: 'Detection Model Weight', type: 'text', ph: './weights/det_10g.onnx', list: 'det-models' },
+        { name: 'rec_weight', label: 'Recognition Model Weight', type: 'text', ph: './weights/w600k_mbf.onnx', list: 'rec-models' },
         { name: 'confidence_thresh', label: 'Confidence Threshold', type: 'number', ph: '0.5', step: '0.01', min: '0', max: '1' },
         { name: 'similarity_thresh', label: 'Similarity Threshold', type: 'number', ph: '0.4', step: '0.01', min: '0', max: '1' },
         { name: 'unknown_debounce_sec', label: 'Unknown Debounce (sec)', type: 'number', ph: '5', min: '1' },
@@ -76,6 +86,12 @@ export default function Settings() {
                 </div>
             )}
             <form onSubmit={handleSubmit}>
+                <datalist id="det-models">
+                    {detectionModels.map(model => <option key={model} value={model} />)}
+                </datalist>
+                <datalist id="rec-models">
+                    {recognitionModels.map(model => <option key={model} value={model} />)}
+                </datalist>
                 {FIELDS.map(f => (
                     <div className="form-group" key={f.name}>
                         <label htmlFor={f.name}>{f.label}</label>
@@ -88,6 +104,7 @@ export default function Settings() {
                             min={f.min}
                             max={f.max}
                             placeholder={f.ph}
+                            list={f.list}
                             value={form[f.name]}
                             onChange={handleChange}
                             style={{ width: '100%' }}

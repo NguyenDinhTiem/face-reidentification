@@ -14,7 +14,7 @@ from pydantic import BaseModel
 
 import db
 from database import FaceDatabase
-from models import SCRFD, ArcFace
+from models import ArcFace, FaceDetector, create_detector
 from utils.logging import setup_logging
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -25,7 +25,7 @@ logger = logging.getLogger("api")
 
 
 class AppState:
-    detector: Optional[SCRFD] = None
+    detector: Optional[FaceDetector] = None
     recognizer: Optional[ArcFace] = None
     face_db: Optional[FaceDatabase] = None
 
@@ -47,7 +47,11 @@ state = AppState()
 def initialize_models():
     try:
         logger.info("Loading models...")
-        state.detector = SCRFD(state.det_weight, input_size=(640, 640), conf_thres=state.confidence_thresh)
+        state.detector = create_detector(
+            state.det_weight,
+            input_size=(640, 640),
+            conf_thres=state.confidence_thresh,
+        )
         state.recognizer = ArcFace(state.rec_weight)
         state.face_db = FaceDatabase(embedding_size=state.recognizer.embedding_size, db_path=state.db_path)
         if not state.face_db.load():
@@ -251,7 +255,7 @@ async def get_models():
     if not os.path.exists(weights_dir):
         return {"models": []}
     try:
-        models = [f for f in os.listdir(weights_dir) if f.endswith(".onnx")]
+        models = sorted(f for f in os.listdir(weights_dir) if f.endswith(".onnx"))
         return {"models": models}
     except Exception as e:
         logger.error(f"Error listing models: {e}")

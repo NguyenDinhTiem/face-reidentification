@@ -3,6 +3,7 @@ onnxruntime-gpu        # use onnxruntime-gpu instead if CUDA is available
 opencv-python
 numpy
 scikit-image
+matplotlib
 faiss-cpu
 fastapi
 uvicorn
@@ -10,4 +11,4 @@ websockets
 python-multipart
 PyQt6
 asyncpg
- requests
+requests

@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 from database import FaceDatabase
-from models import SCRFD, ArcFace
+from models import ArcFace, FaceDetector, create_detector
 from utils.helpers import draw_bbox, draw_bbox_info
 from utils.logging import setup_logging
 
@@ -25,7 +25,12 @@ def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for face re-identification pipeline."""
     parser = argparse.ArgumentParser(description="Face Detection-and-Recognition with FAISS")
 
-    parser.add_argument("--det-weight", type=str, default="./weights/det_10g.onnx", help="Path to detection model")
+    parser.add_argument(
+        "--det-weight",
+        type=str,
+        default="./weights/det_10g.onnx",
+        help="Path to detection model (for example: ./weights/det_10g.onnx or ./weights/yolo26-face.onnx)",
+    )
     parser.add_argument("--rec-weight", type=str, default="./weights/w600k_mbf.onnx", help="Path to recognition model")
     parser.add_argument("--similarity-thresh", type=float, default=0.4, help="Similarity threshold between faces")
     parser.add_argument("--confidence-thresh", type=float, default=0.5, help="Confidence threshold for face detection")
@@ -45,7 +50,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def build_face_database(
-    detector: SCRFD,
+    detector: FaceDetector,
     recognizer: ArcFace,
     params: argparse.Namespace,
     force_update: bool = False,
@@ -53,7 +58,7 @@ def build_face_database(
     """Build or load the FAISS face database from reference images.
 
     Args:
-        detector: Face detection model.
+    detector: Face detection model.
         recognizer: Face recognition model (provides embedding_size).
         params: CLI arguments namespace.
         force_update: If True, rebuild even when a saved database exists.
@@ -113,7 +118,7 @@ def build_face_database(
 
 def frame_processor(
     frame: np.ndarray,
-    detector: SCRFD,
+    detector: FaceDetector,
     recognizer: ArcFace,
     face_db: FaceDatabase,
     colors: dict[str, tuple[int, int, int]],
@@ -191,7 +196,11 @@ def main(params: argparse.Namespace) -> None:
         params: Parsed CLI arguments.
     """
     try:
-        detector = SCRFD(params.det_weight, input_size=(640, 640), conf_thres=params.confidence_thresh)
+        detector = create_detector(
+            params.det_weight,
+            input_size=(640, 640),
+            conf_thres=params.confidence_thresh,
+        )
         recognizer = ArcFace(params.rec_weight)
     except Exception as e:
         logger.error(f"Failed to load model weights: {e}")

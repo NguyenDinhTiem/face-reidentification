@@ -33,6 +33,12 @@ export async function fetchSettings() {
     return res.json()
 }
 
+export async function fetchModels() {
+    const res = await fetch(`${BASE}/models`)
+    if (!res.ok) throw new Error('Failed to fetch models')
+    return res.json()
+}
+
 export async function saveSettings(payload) {
     const res = await fetch(`${BASE}/settings`, {
         method: 'POST',
